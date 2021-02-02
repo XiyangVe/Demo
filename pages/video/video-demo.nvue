@@ -1,0 +1,239 @@
+<template>
+	<view :style="boxStyle">
+		<list @loadmore="getData()" :loadmoreoffset="wHeight*3" :show-scrollbar="false" ref="listBox" :pagingEnabled="true" :scrollable="true">
+			<cell v-for="(item,i) in dataList" :key="i">
+				<div ref="item" class="item" :style="boxStyle">
+					<jVideo :state="item.state" :src="item.src" :boxStyle="boxStyle"></jVideo>
+					<view class="videoHover" @click="tapVideoHover(item.state,$event)" :style="boxStyle">
+						<image v-if="item.state=='pause'" class="playState" src="/static/video/play.png"></image>
+					</view>
+					<view class="userInfo" @appear="k=i">
+						<image class="userAvatar" :src="item.userAvatar"></image>
+						<view class="like" @click="cLike(item.video_id,item.like);item.like=!item.like">
+							<image v-if="item.like" class="likeIco" src="/static/video/xinActive.png" />
+							<image v-else class="likeIco" src="/static/video/xin.png" />
+							<text class="likeNum" :class="{'likeNumActive':item.like}">{{item.like_n}}</text>
+						</view>
+						<view class="comment" @click="toComment(i)">
+							<image class="commentIco" src="/static/video/comment.png"></image>
+							<text style="color: #FFFFFF;">999</text>
+						</view>
+						<view class="share" @click="share">
+							<image class="shareIco" src="/static/video/share.png"></image>
+							<text class="shareTex">分享</text>
+						</view>
+					</view>
+					<view class="content">
+						<text class="userName">{{item.title}}</text>
+						<text class="words">{{item.msg}}</text>
+					</view>
+				</div>
+			</cell>
+		</list>
+	</view>
+</template>
+<script>
+	const dom = weex.requireModule('dom');
+	const BindingX = uni.requireNativePlugin('bindingx');
+	import jVideo from './j-video.nvue';
+	import $https from '@/utils/lib/https.js';
+	import config from '@/utils/config.js';
+	
+	export default {
+		components: {
+			jVideo
+		},
+		data: {
+			dataList: [],
+			scrollTop: 0,
+			oldScrollTop: 0,
+			wHeight: 0,
+			vWidth: 0,
+			k: 0,
+			//正在播放的视频id列队，列队用于处理滑动过快导致的跳频问题
+			playIngIds: [], 
+			ready: false,
+		},
+		watch: {
+			k(k, old_k) {
+				this.dataList[k].state = 'play'
+				this.dataList[old_k].state = 'stop'
+			},
+		},
+		computed:{
+			boxStyle(){
+				return `width: ${this.vWidth}px;height: ${this.wHeight}px;`
+			}
+		},
+		onLoad() {
+			const res = uni.getSystemInfoSync();
+			this.wHeight = res.windowHeight
+			this.vWidth = res.windowWidth
+			// this.getData(e => {
+			// 	this.dataList[0].state = 'play';
+			// 	this.ready = true;
+			// });
+			this.getData()
+		},
+		onUnload() {
+			console.log('onUnload')
+			this.dataList = []
+		},
+		methods: {
+			// 获取随机视频
+			getVideo(){
+				$https.get('/messPublish/randomVidio',{
+					messSortGrade: 1
+				}).then(res => {
+					let src = encodeURI(config.baseUrl+'/file/'+res.data.messVidio)
+					let avatar = encodeURI(config.baseUrl+'/file/'+res.data.userHeadImage)
+					this.dataList.push({
+						title: res.data.title,
+						msg: res.data.messText,
+						state: 'pause',
+						like: false,
+						like_n: 888,
+						src : src,
+						userAvatar: avatar
+					});
+				})
+			},
+			
+			//点击播放&&暂停
+			tapVideoHover(state, event) {
+				if (state == 'play' || state == 'continue') {
+					this.dataList[this.k].state = 'pause';
+				} else {
+					this.dataList[this.k].state = 'continue';
+				}
+			},
+			toComment() {
+				uni.showToast({
+					title: '抽屉式评论区域，敬请期待',
+					icon: 'none'
+				})
+			},
+			share() {
+				uni.showToast({
+					title: '分享功能，敬请期待',
+					icon: 'none'
+				})
+			},
+			cLike(video_id, sss) {
+				const video = this.dataList[this.k];
+				sss ? video.like_n -= 1 : video.like_n += 1;
+			},
+			getData(){
+				console.log('滑动视频')
+				this.getVideo()
+			}
+			
+			// getData(callback = e => {}) {
+			// 	for (let i = 0; i < 5; i++) {
+			// 		this.dataList.push({
+			// 			title: "重庆万佳IT",
+			// 			msg: "一家专业uniapp开发公司",
+			// 			state: 'pause',
+			// 			// like: i % 2 > 0,
+			// 			like: true,
+			// 			like_n: i+1,
+			// 			src : 'https://cloud.video.taobao.com//play/u/1768198696/p/1/e/6/t/1/239439242603.mp4',
+			// 			videoImg: ''
+			// 		});
+			// 	}
+			// 	setTimeout(e => { //模拟接口请求时间为1秒
+			// 		callback()
+			// 	}, 1000);
+			// }
+		}
+	}
+</script>
+<style>
+	.item {
+		width: 750upx;
+		background-color: #000000;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+	}
+
+	.videoHover {
+		position: absolute;
+		top: 0;
+		left: 0;
+		flex: 1;
+		background-color: rgba(0, 0, 0, 0.1);
+		justify-content: center;
+		align-items: center;
+	}
+
+	.playState {
+		width: 80upx;
+		height: 80upx;
+	}
+
+	.userInfo {
+		position: absolute;
+		bottom: 250rpx;
+		right: 10rpx;
+		justify-content: center;
+		align-items: center;
+		flex-direction: column;
+	}
+
+	.userAvatar {
+		border-radius: 100%;
+		margin-bottom: 15px;
+		border-style: solid;
+		border-width: 2px;
+		border-color: #ffffff;
+	}
+
+	.userAvatar {
+		width: 90upx;
+		height: 90upx;
+	}
+
+	.likeIco,
+	.shareIco,
+	.commentIco {
+		width: 60upx;
+		height: 60upx;
+		margin-top: 15px;
+	}
+
+	.likeNum,
+	.commentNum,
+	.shareTex {
+		color: #ffffff;
+		font-size: 30upx;
+		text-align: center;
+		margin: 5px;
+	}
+
+	.likeNumActive {
+		color: red;
+	}
+
+	.content {
+		width: 750rpx;
+		z-index: 99;
+		position: absolute;
+		bottom: 10px;
+		justify-content: center;
+		flex-direction: column;
+		justify-content: flex-start;
+		color: #ffffff;
+	}
+
+	.userName {
+		font-size: 30upx;
+		color: #ffffff;
+	}
+
+	.words {
+		margin-top: 10upx;
+		font-size: 30upx;
+		color: #ffffff;
+	}
+</style>

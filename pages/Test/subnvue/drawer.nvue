@@ -1,0 +1,273 @@
+<template>
+	<div class="wrapper">
+		<div class="top" @click="hideDrawer()"></div>
+		<div class="buttom">
+			<text class="bottom-title">评论</text>
+			<scroll-view scroll-y style="flex: 8;" @scrolltolower="scrolltolower">
+				<!-- 评论列表 -->
+				<block v-for="(item,index) in plList" :key="index">
+					<view class="flex p-2 justify-between">
+						<view class="flex">
+							<view class="">
+								<image class="rounded-circle" style="width: 80rpx;height: 80rpx;" :src="`${baseUrl}${item.userHeadImage}`" mode="widthFix"></image>
+							</view>
+							<view class="ml-2">
+								<text class="text-light-muted mb-1 font-sm">{{item.commentUserName}}</text>
+								<text class="font-sm mb-1">{{item.commentContent}}</text>
+								<text class="font-small">{{item.commentTime|formatTime}}</text>
+								<view class="" v-if="item.list.length>0" @tap="getHfList(index)">
+									<text class="font-sm text-info">共{{item.list.length}}条回复 ></text>
+								</view>
+								<view v-if="index === isId">
+									<view class="flex" v-for="(item2,index2) in item.list" :key="index2">
+										<image class="rounded-circle" style="width: 80rpx;height: 80rpx;" :src="`${baseUrl}${item2.userHeadImage}`" mode="widthFix"></image>
+										<view class="">
+											<text class="text-light-muted mb-1 font-sm">{{item2.commentUserName}}</text>
+											<text class="font-sm">{{item2.commentReplyContent}}</text>
+											<text class="font-small">{{item2.commentReplyTime|formatTime}}</text>
+										</view>
+									</view>
+								</view>
+							</view>
+						</view>
+						<view class="flex flex-column align-center">
+							<view class="mb-1 flex flex-column align-center" @click="mescommentUp(item)">
+								<image v-if="item.isPiont == 1" src="/static/test/img/axc.png" mode="widthFix" style="width: 50rpx;"></image>
+								<image v-else src="/static/test/img/bed.png" mode="widthFix" style="width: 50rpx;"></image>
+								<text v-if="item.count" class="font-small">{{item.count}}</text>
+							</view>
+							<view @click="hfpl(item)" class="rounded-circle bg-danger px-2 py-1" hover-class="bg-primary">
+								<text class="font-sm text-white text-center">回复</text>
+							</view>
+						</view>
+					</view>
+				</block>
+			</scroll-view>
+			<!-- 底部评论按钮与输入框 -->
+			<div class="flex align-center justify-between mb-2" style="height: 80rpx;">
+				<div class="flex-3">
+					<input class="border rounded-circle p-2 font-small" 
+					style="height: 80rpx;"
+					v-model="commentContent"
+					:focus="focus"
+					type="text" placeholder="说点什么吧"/>
+				</div>
+				<view class="flex-1 border flex align-center justify-center rounded-circle"
+					style="height: 80rpx;" hover-class="bg-info"
+					@click="publish">
+					<text style="font-size: 26rpx;">{{focus ? "回复" : "发表"}}</text>
+				</view>
+			</div>
+		</div>
+	</div>
+</template>
+
+<script>
+	import config from '@/utils/config.js'
+	import $Time from '@/utils/lib/time.js'
+	import baseUrl from '@/store/$u.mixin.js';
+	import { mapState } from 'vuex';
+	
+	const modal = weex.requireModule('modal');
+	export default {
+		mixins:[baseUrl],
+		data() {
+			return {
+				// 评论内容
+				commentContent: '',
+				// 视频id
+				videoId: '',
+				// 页码
+				pageNo: 1,
+				// 是否回复发表
+				focus: false,
+				// 控制评论回复显示
+				isId: null,
+				// 评论回复数据
+				commentedId: 0,
+				commentedUserId: 0,
+				msgCommentedReplyId: 0
+			}
+		},
+		filters:{
+			formatTime(value){
+				return $Time.gettime(value)
+			}
+		},
+		computed:{
+			...mapState({
+				plList:state=>state.index.videoPlList
+			})
+		},
+		methods: {
+			hideDrawer() {
+				uni.getCurrentSubNVue().hide('auto')
+			},
+			// 上拉加载更多
+			scrolltolower() {
+			  this.pageNo ++
+			  setTimeout(()=>{
+				  this.getUserPlList()
+			  },500)
+			},
+			// 评论点赞
+			mescommentUp(e){
+				var that = this;
+				uni.request({
+				    url: config.baseUrl + '/mescomment/updateId',
+				    data: {
+				        id:e.id,
+				        count: e.count,
+				        type:e.isPiont,
+				    },
+					method: 'GET',
+				    header: {
+				        'Authorization': that.$store.state.login.token ,
+						'content-type':'application/json;charset=UTF-8;'
+				    },
+				    success: (res) => {
+						if(res.data.code==200){
+							that.getUserPlList()
+						}else{
+							uni.showToast({
+								title: res.data.msg,
+								icon: 'none'
+							})
+						}
+				    }
+				})
+			},
+			// 获取回复评论的列表
+			getHfList(e){
+				this.isId = e
+			},
+			// 回复评论
+			hfpl(item){
+				this.commentedId = item.id
+				this.commentedUserId = item.userId
+				this.msgCommentedReplyId = item.id
+				this.focus = true
+			},
+			// 更新用户评论
+			getUserPlList(){
+				let videoId = this.$store.state.index.videoId
+				var that = this;
+				uni.request({
+				    url: config.baseUrl + '/mescomment/list',
+				    data: {
+				        messPublishId: videoId,
+						pageNo: that.pageNo
+				    },
+					method: 'GET',
+				    header: {
+				        'Authorization': that.$store.state.login.token ,
+						'content-type':'application/json;charset=UTF-8;'
+				    },
+				    success: (res) => {
+						if(res.data.code==200){
+							that.$store.dispatch('index/getvideoPlList',res.data.data.page.list)
+						}else{
+							uni.showToast({
+								title: res.data.msg,
+								icon: 'none'
+							})
+						}
+				    }
+				})
+			},
+			// 发布评论
+			publish(){
+				let videoId = this.$store.state.index.videoId
+				if(this.commentContent == ''){
+					uni.showToast({
+						title: "说点什么吧",
+						icon: 'none'
+					})
+					return;
+				}
+				var that = this
+				if(that.focus == true){
+					uni.request({
+					    url: config.baseUrl + '/mescommentrelay/add',
+					    data: {
+					        commentedId: that.commentedId,
+					        commentedUserId: that.commentedUserId,
+					        commentReplyContent: that.commentContent,
+					        msgCommentedReplyId: that.commentedId
+					    },
+						method: 'POST',
+					    header: {
+					        'Authorization': that.$store.state.login.token ,
+							'content-type':'application/json;charset=UTF-8;'
+					    },
+					    success: (res) => {
+							console.log(res)
+							if(res.data.code==200){
+								that.focus = false
+								that.getUserPlList()
+								that.commentContent = ''
+							}else{
+								uni.showToast({
+									title: res.data.msg,
+									icon: 'none'
+								})
+							}
+					    }
+					})
+				}else{
+					uni.request({
+					    url: config.baseUrl + '/mescomment/add',
+					    data: {
+					        messPublishId: videoId,
+							commentContent: that.commentContent
+					    },
+						method: 'POST',
+					    header: {
+					        'Authorization': that.$store.state.login.token ,
+							'content-type':'application/json;charset=UTF-8;'
+					    },
+					    success: (res) => {
+							if(res.data.code==200){
+								that.getUserPlList()
+								that.commentContent = ''
+							}else{
+								uni.showToast({
+									title: res.data.msg,
+									icon: 'none'
+								})
+							}
+					    }
+					})
+				}
+			}
+		}
+	}
+</script>
+
+<style scoped lang="scss">
+	.wrapper {
+		flex-direction: column;
+		flex: 1;
+		text-align: center;
+		background-color: transparent;
+	}
+	.top {
+		background-color: #000;
+		opacity: 0.6;
+		flex: 4;
+	}
+	.buttom {
+		background-color: #EEEEEE;
+		flex: 8;
+		border-top-left-radius: 10px;
+		border-top-right-radius: 10px;
+	}
+	.bottom-title {
+		flex: 1;
+		height: 30px;
+		line-height: 30px;
+		text-align: center;
+		font-size: 14px;
+		color: #888;
+	}
+</style>

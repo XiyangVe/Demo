@@ -1,0 +1,88 @@
+view,text,swiper-item,navigator{
+	padding: 0;
+	margin: 0;
+	box-sizing: border-box;
+	/*图片高度自适应*/
+	height: auto;
+}
+image{
+	height: auto;
+}
+/* 加载动画 */
+.loading-box{
+	position: absolute;
+	left: 50%;
+	top: 30%;
+	transform: translate(-50%,-50%);
+}
+/* 圆头像 */
+.y-img{
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+}
+
+/* 1.页面背景色 */
+.page{
+	background-color: #EDEDED;
+	/* vue页面实现占满整个屏幕 */
+	/* #ifndef APP-PLUS-NVUE */
+	min-height: 100%;
+	height: auto;
+	/* #endif */
+	/* #ifdef APP-PLUS-NVUE */
+	flex: 1;
+	/* #endif */
+}
+/* 2.主背景色 */
+.main-bg-color{
+	background-color: #0077FF;
+}
+/* 3.主文字色 */
+.main-text-color{
+	color: #0077FF !important;
+}
+/* 4.状态栏高度 */
+.status_bar {
+	/* #ifdef APP-PLUS */
+	height: var(--status-bar-height);
+	/* #endif */
+	width: 100%;
+}
+
+
+/*常见样式封装*/
+/*flex布局*/
+.u-f,.u-f-ac,.u-f-ajc,.u-f-ajs{
+    display: flex;
+}
+/*垂直方向居中*/
+.u-f-ac,.u-f-ajc,.u-f-ajs{
+    align-items: center;
+}
+/*垂直竖直方向居中*/
+.u-f-ajc{
+    justify-content: center;
+}
+/*两边对齐*/
+.u-f-ajs{
+    justify-content: space-around;
+}
+
+/*字体省略样式*/
+.eps,.eps-1,.eps-2{
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+}
+.eps-1{
+    -webkit-line-clamp: 1;
+}
+.eps-2{
+    -webkit-line-clamp: 2;
+}
+.eps-3{
+    -webkit-line-clamp: 3;
+}
+
+
